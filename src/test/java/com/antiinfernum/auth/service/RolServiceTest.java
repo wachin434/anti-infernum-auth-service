@@ -54,6 +54,18 @@ public class RolServiceTest {
     }
 
     @Test
+    public void testFindByNombre() {
+        Rol rol = createRol();
+        when(rolRepository.findByNombre("admin")).thenReturn(
+                Optional.of(rol));
+
+        Rol foundRol = rolService.findByNombre("admin");
+
+        assertNotNull(foundRol);
+        assertEquals(ROL_ID, foundRol.getId());
+    }
+
+    @Test
     public void testSave() {
         Rol rol = createRol();
         when(rolRepository.save(rol)).thenReturn(rol);
