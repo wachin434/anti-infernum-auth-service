@@ -25,7 +25,7 @@ public class RolService {
     }
 
     public Rol findByNombre(String nombre) {
-        return rolRepository.findByNombre(nombre);
+        return rolRepository.findByNombre(nombre).orElse(null);
     }
 
     public Rol save(Rol rol) {
@@ -78,7 +78,7 @@ public class RolService {
     }
 
     private boolean validarExistenciaPorNombre(String nombre) {
-        return rolRepository.findByNombre(nombre) != null;
+        return rolRepository.findByNombre(nombre).isPresent();
     }
 
     private boolean validarExistencia(String id) {
