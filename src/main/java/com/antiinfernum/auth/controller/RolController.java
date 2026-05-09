@@ -43,6 +43,15 @@ public class RolController {
         return ResponseEntity.ok(rol);
     }
 
+    @GetMapping("/nombre/{nombre}")
+    public ResponseEntity<Rol> getRolByNombre(String nombre) {
+        Rol rol = rolService.findByNombre(nombre);
+        if (rol == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(rol);
+    }
+
     @PostMapping
     public ResponseEntity<Rol> save(@RequestBody Rol rol) {
         return ResponseEntity.status(HttpStatus.CREATED).body(rolService.save(rol));

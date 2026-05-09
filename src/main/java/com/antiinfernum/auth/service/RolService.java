@@ -24,10 +24,18 @@ public class RolService {
         return rolRepository.findById(id).orElse(null);
     }
 
+    public Rol findByNombre(String nombre) {
+        return rolRepository.findByNombre(nombre);
+    }
+
     public Rol save(Rol rol) {
         if (!validarRol(rol)) {
             throw new IllegalArgumentException(
                     "El rol es invalido: El nombre del rol no puede ser nulo o estar vacio.");
+        }
+        if (validarExistenciaPorNombre(rol.getNombre())) {
+            throw new IllegalArgumentException(
+                    "El rol es invalido: Ya existe un rol con el nombre " + rol.getNombre() + ".");
         }
         return rolRepository.save(rol);
     }
@@ -67,6 +75,10 @@ public class RolService {
             return false;
         }
         return true;
+    }
+
+    private boolean validarExistenciaPorNombre(String nombre) {
+        return rolRepository.findByNombre(nombre) != null;
     }
 
     private boolean validarExistencia(String id) {
