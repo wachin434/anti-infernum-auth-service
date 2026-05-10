@@ -34,6 +34,6 @@ public class Usuario {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String contra;
 
-    @Column(name = "fecua_registro", nullable = false)
+    @Column(name = "fecha_registro", nullable = false)
     private Date fechaRegistro;
 }
