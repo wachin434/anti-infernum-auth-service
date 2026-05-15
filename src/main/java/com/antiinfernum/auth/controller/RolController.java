@@ -3,9 +3,11 @@ package com.antiinfernum.auth.controller;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,7 +37,7 @@ public class RolController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Rol> getRolById(String id) {
+    public ResponseEntity<Rol> getRolById(@PathVariable String id) {
         Rol rol = rolService.findById(id);
         if (rol == null) {
             return ResponseEntity.notFound().build();
@@ -71,5 +73,15 @@ public class RolController {
     public ResponseEntity<Void> delete(@PathVariable String id) {
         rolService.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<String> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity.badRequest().body(ex.getMessage());
+    }
+
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<Void> handleNotFound(EntityNotFoundException ex) {
+        return ResponseEntity.notFound().build();
     }
 }
