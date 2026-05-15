@@ -79,6 +79,9 @@ public class UsuarioService {
                         usuarioExistente.setNombre(usuario.getNombre());
                     }
                     if (usuario.getEmail() != null && !usuario.getEmail().trim().isEmpty()) {
+                        if (!validarEmail(usuario.getEmail())) {
+                            throw new IllegalArgumentException("El email no tiene un formato valido.");
+                        }
                         if (validarExistenciaPorEmail(usuario.getEmail())) {
                             Usuario usuarioPorEmail = usuarioRepository.findByEmail(usuario.getEmail()).orElse(null);
                             if (usuarioPorEmail != null && !usuarioPorEmail.getId().equals(id)) {
@@ -104,6 +107,9 @@ public class UsuarioService {
         if (email == null || email.trim().isEmpty() || contra == null || contra.trim().isEmpty()) {
             throw new IllegalArgumentException("El email y la contraseña son requeridos para iniciar sesión.");
         }
+        if (!validarEmail(email)) {
+            throw new IllegalArgumentException("El email no tiene un formato valido.");
+        }
         Usuario usuario = usuarioRepository.findByEmail(email)
                 .orElseThrow(() -> new EntityNotFoundException("El usuario con email " + email + " no existe."));
         if (!passwordEncoder.matches(contra, usuario.getContra())) {
@@ -123,13 +129,19 @@ public class UsuarioService {
         if (usuario.getNombre() == null || usuario.getNombre().trim().isEmpty()) {
             return false;
         }
-        if (usuario.getEmail() == null || usuario.getEmail().trim().isEmpty()) {
+        String email = usuario.getEmail();
+        if (!validarEmail(email)) {
             return false;
         }
         if (usuario.getContra() == null || usuario.getContra().trim().isEmpty()) {
             return false;
         }
         return true;
+    }
+
+    private boolean validarEmail(String email) {
+        return email != null && !email.trim().isEmpty()
+                && email.trim().matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$");
     }
 
     private boolean validarExistenciaPorEmail(String email) {
