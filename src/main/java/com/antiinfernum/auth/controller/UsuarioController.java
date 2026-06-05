@@ -4,6 +4,9 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.persistence.EntityNotFoundException;
+import java.util.Map;
+
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -77,8 +80,14 @@ public class UsuarioController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody String email, String contra) {
-        return ResponseEntity.ok(usuarioService.login(email, contra));
+    public ResponseEntity<AuthResponse> login(@RequestBody Map<String, String> credentials) {
+        String email = credentials.get("email");
+        String contra = credentials.get("contra");
+        AuthResponse authResponse = usuarioService.login(email, contra);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + authResponse.getToken())
+                .body(authResponse);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
