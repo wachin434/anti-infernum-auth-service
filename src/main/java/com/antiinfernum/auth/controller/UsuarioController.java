@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.antiinfernum.auth.dto.AuthResponse;
 import com.antiinfernum.auth.model.Usuario;
 import com.antiinfernum.auth.service.UsuarioService;
 
@@ -76,8 +77,8 @@ public class UsuarioController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Usuario> login(@RequestBody Usuario usuario) {
-        return ResponseEntity.ok(usuarioService.login(usuario.getEmail(), usuario.getContra()));
+    public ResponseEntity<AuthResponse> login(@RequestBody String email, String contra) {
+        return ResponseEntity.ok(usuarioService.login(email, contra));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
