@@ -1,24 +1,38 @@
 package com.antiinfernum.auth.service;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.antiinfernum.auth.dto.AuthResponse;
+import com.antiinfernum.auth.model.Rol;
 import com.antiinfernum.auth.model.Usuario;
+import com.antiinfernum.auth.repository.RolRepository;
 import com.antiinfernum.auth.repository.UsuarioRepository;
 
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 
 @Service
+@Transactional
 public class UsuarioService {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
 
-    private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    @Autowired
+    private RolRepository rolRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private JwtService jwtService;
 
     public List<Usuario> findAll() {
         return usuarioRepository.findAll();
@@ -42,6 +56,16 @@ public class UsuarioService {
                     "El usuario es invalido: Ya existe un usuario con el email " + usuario.getEmail() + ".");
         }
         usuario.setContra(encodePassword(usuario.getContra()));
+
+        // Establecer rol predeterminado
+        if (usuario.getRoles() == null || usuario.getRoles().isEmpty()) {
+            Optional<Rol> rol = rolRepository.findByNombre("usuario");
+            if (rol.isPresent()) {
+                usuario.setRoles(Set.of(rol.get()));
+            } else {
+                throw new IllegalStateException("No se encontró el rol predeterminado 'usuario'.");
+            }
+        }
         return usuarioRepository.save(usuario);
     }
 
@@ -98,24 +122,29 @@ public class UsuarioService {
                     if (usuario.getFechaRegistro() != null) {
                         usuarioExistente.setFechaRegistro(usuario.getFechaRegistro());
                     }
+                    if (usuario.getRoles() != null && !usuario.getRoles().isEmpty()) {
+                        usuarioExistente.setRoles(usuario.getRoles());
+                    }
                     return usuarioRepository.save(usuarioExistente);
                 })
                 .orElseThrow(() -> new EntityNotFoundException("El usuario con ID " + id + " no existe."));
     }
 
-    public Usuario login(String email, String contra) {
-        if (email == null || email.trim().isEmpty() || contra == null || contra.trim().isEmpty()) {
-            throw new IllegalArgumentException("El email y la contraseña son requeridos para iniciar sesión.");
-        }
-        if (!validarEmail(email)) {
-            throw new IllegalArgumentException("El email no tiene un formato valido.");
-        }
+    public AuthResponse login(String email, String contra) {
         Usuario usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("El usuario con email " + email + " no existe."));
+                .orElseThrow(() -> new EntityNotFoundException("Credenciales incorrectas"));
+
         if (!passwordEncoder.matches(contra, usuario.getContra())) {
-            throw new IllegalArgumentException("Credenciales invalidas: Email o contraseña incorrectos.");
+            throw new IllegalArgumentException("Credenciales incorrectas");
         }
-        return usuario;
+
+        String token = jwtService.generateToken(usuario);
+
+        Set<String> roles = usuario.getRoles().stream()
+                .map(Rol::getNombre)
+                .collect(Collectors.toSet());
+
+        return new AuthResponse(token, usuario.getEmail(), roles);
     }
 
     private String encodePassword(String contra) {

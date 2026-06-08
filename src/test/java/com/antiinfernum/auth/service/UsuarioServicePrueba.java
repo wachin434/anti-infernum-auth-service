@@ -13,7 +13,10 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import com.antiinfernum.auth.dto.AuthResponse;
+import com.antiinfernum.auth.model.Rol;
 import com.antiinfernum.auth.model.Usuario;
+import com.antiinfernum.auth.repository.RolRepository;
 import com.antiinfernum.auth.repository.UsuarioRepository;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -26,6 +29,12 @@ public class UsuarioServicePrueba {
 
     @MockitoBean
     private UsuarioRepository usuarioRepository;
+
+    @MockitoBean
+    private RolRepository rolRepository;
+
+    @MockitoBean
+    private JwtService jwtService;
 
     private static final String USUARIO_ID = "d3b2b2f0-1234-4f1a-9876-abcdef123456";
     private static final String USUARIO_EMAIL = "test@example.com";
@@ -84,6 +93,7 @@ public class UsuarioServicePrueba {
         usuario.setFechaRegistro(new Date(System.currentTimeMillis()));
 
         when(usuarioRepository.findByEmail(USUARIO_EMAIL)).thenReturn(Optional.empty());
+        when(rolRepository.findByNombre("usuario")).thenReturn(Optional.of(new Rol("rol-id", "usuario")));
         when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         Usuario savedUsuario = usuarioService.save(usuario);
@@ -98,11 +108,14 @@ public class UsuarioServicePrueba {
     public void pruebaLoginExitoso() {
         Usuario usuario = createUsuario();
         when(usuarioRepository.findByEmail(USUARIO_EMAIL)).thenReturn(Optional.of(usuario));
+        when(jwtService.generateToken(usuario)).thenReturn("fake-jwt-token");
 
-        Usuario loggedUsuario = usuarioService.login(USUARIO_EMAIL, USUARIO_CONTRA);
+        AuthResponse authResponse = usuarioService.login(USUARIO_EMAIL, USUARIO_CONTRA);
 
-        assertNotNull(loggedUsuario);
-        assertEquals(USUARIO_EMAIL, loggedUsuario.getEmail());
+        assertNotNull(authResponse);
+        assertEquals(USUARIO_EMAIL, authResponse.getEmail());
+        assertEquals("fake-jwt-token", authResponse.getToken());
+        assertNotNull(authResponse.getRoles());
     }
 
     @Test
@@ -122,23 +135,24 @@ public class UsuarioServicePrueba {
 
     @Test
     public void pruebaActualizar() {
-        Usuario usuario = new Usuario();
-        usuario.setNombre("Usuario actualizado");
-        usuario.setEmail(USUARIO_EMAIL);
-        usuario.setContra(USUARIO_CONTRA);
-        usuario.setFechaRegistro(new Date(System.currentTimeMillis()));
+        Usuario usuarioExistente = createUsuario();
+        Usuario datosActualizados = new Usuario();
+        datosActualizados.setNombre("Usuario actualizado");
+        datosActualizados.setEmail(USUARIO_EMAIL);
+        datosActualizados.setContra(USUARIO_CONTRA);
+        datosActualizados.setFechaRegistro(new Date(System.currentTimeMillis()));
 
         when(usuarioRepository.existsById(USUARIO_ID)).thenReturn(true);
-        when(usuarioRepository.findByEmail(USUARIO_EMAIL))
-                .thenReturn(Optional.of(new Usuario(USUARIO_ID, "Usuario actualizado", USUARIO_EMAIL,
-                        new BCryptPasswordEncoder().encode(USUARIO_CONTRA), new Date(System.currentTimeMillis()))));
+        when(usuarioRepository.findByEmail(USUARIO_EMAIL)).thenReturn(Optional.of(usuarioExistente));
         when(usuarioRepository.save(any(Usuario.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Usuario updatedUsuario = usuarioService.update(USUARIO_ID, usuario);
+        Usuario updatedUsuario = usuarioService.update(USUARIO_ID, datosActualizados);
 
         assertNotNull(updatedUsuario);
         assertEquals(USUARIO_ID, updatedUsuario.getId());
+        assertEquals("Usuario actualizado", updatedUsuario.getNombre());
         assertTrue(new BCryptPasswordEncoder().matches(USUARIO_CONTRA, updatedUsuario.getContra()));
+        verify(usuarioRepository, times(1)).save(any(Usuario.class));
     }
 
     @Test
